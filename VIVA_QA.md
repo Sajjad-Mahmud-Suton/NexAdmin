@@ -121,3 +121,48 @@ $$\text{CPU \%} = \left(1 - \frac{\Delta \text{idle}}{\Delta \text{total}}\right
 
 #### Q30: How does the Bash `trap` command handle operating system signals?
 **Ans:** `trap '<handler_function>' INT TERM EXIT` registers an asynchronous callback with the shell. When the script receives an interrupt signal (such as `Ctrl+C` / `SIGINT` or `SIGTERM`) or reaches natural exit, the shell intercepts the signal and executes the handler function, enabling the script to restore terminal echo (`stty echo`), terminate child daemons, and write audit log entries before exiting.
+
+---
+
+### 7. Academic OS Algorithms (C Engine Simulators)
+
+#### Q31: What is the Convoy Effect in FCFS CPU scheduling?
+**Ans:** The Convoy Effect occurs in non-preemptive First-Come, First-Served scheduling when a CPU-intensive process with a very large burst time arrives just before multiple short, I/O-bound processes. The short processes become stuck behind the long process in the ready queue, leading to low CPU and device utilization and severely inflated average waiting times.
+
+#### Q32: Why is Shortest Job First (SJF) provably optimal for average waiting time, and what is its major drawback?
+**Ans:** SJF minimizes average waiting time because moving a process with a shorter burst time ahead of a longer one reduces the waiting time of the short process by more than it increases the waiting time of the long process. Its primary drawback is **Starvation**: if short jobs arrive continuously, long processes may never receive CPU execution. Furthermore, true burst times cannot be known in advance in general-purpose operating systems.
+
+#### Q33: How does the choice of Time Quantum impact Round Robin scheduling performance?
+**Ans:** If the quantum is extremely large, Round Robin degenerates into FCFS. If the quantum is extremely small, the system suffers massive CPU overhead due to frequent context switching. As a rule of thumb, the time quantum should be slightly greater than the typical interactive CPU burst so that roughly 80% of CPU bursts finish within a single time slice.
+
+#### Q34: What is Belady's Anomaly in Page Replacement, and why does FIFO suffer from it while LRU does not?
+**Ans:** **Belady's Anomaly** is the counter-intuitive phenomenon where increasing the number of physical page frames results in an *increase* in the number of page faults for certain reference strings. FIFO suffers from Belady's Anomaly because it evicts pages strictly based on arrival order regardless of usage locality. LRU does not suffer from it because LRU is a **Stack Algorithm**, meaning the set of pages in an $N$-frame memory is always a strict subset of the pages in an $(N+1)$-frame memory.
+
+#### Q35: What is a Stack Algorithm in virtual memory management?
+**Ans:** A stack algorithm is a page replacement policy where the set of pages in memory for $n$ frames is always a subset of the pages that would be in memory with $n+1$ frames for the exact same page reference string at any point in time. Stack algorithms (such as LRU and Optimal) are mathematically proven to never exhibit Belady's Anomaly.
+
+#### Q36: Why can't Belady's Optimal Page Replacement algorithm be implemented in real operating systems?
+**Ans:** The Optimal algorithm requires clairvoyant, omniscient knowledge of future memory reference requests (replacing the page that will not be used for the longest period in the future). Because general-purpose operating systems cannot predict arbitrary future user inputs and memory branches, Optimal cannot be deployed online; it serves as a theoretical gold standard to measure the efficiency of online algorithms like LRU.
+
+#### Q37: What are Coffman's four necessary and sufficient conditions for Deadlock?
+**Ans:**
+1. **Mutual Exclusion:** At least one resource is held in a non-shareable mode.
+2. **Hold and Wait:** A process holds at least one resource while waiting to acquire additional resources held by others.
+3. **No Preemption:** Resources cannot be forcibly confiscated; they can only be released voluntarily by the holding process.
+4. **Circular Wait:** A closed circular chain of processes exists where each process waits for a resource held by the next process in the cycle.
+
+#### Q38: What is the difference between Deadlock Prevention and Deadlock Avoidance?
+**Ans:** **Deadlock Prevention** designs static constraints into system protocols to ensure that at least one of the four Coffman conditions can never hold (e.g., resource ordering to eliminate circular wait). **Deadlock Avoidance** dynamically examines every resource request at runtime (using algorithms like Dijkstra's Banker's Algorithm) and only grants a request if the resulting system state remains strictly **Safe**.
+
+#### Q39: Is an Unsafe State in Banker's Algorithm identical to a Deadlock state?
+**Ans:** **No.** An unsafe state is not necessarily a deadlocked state; rather, an unsafe state is a state from which the operating system cannot guarantee that a deadlock will not occur. All deadlocked states are unsafe, but not all unsafe states are currently deadlocked (processes might finish without claiming their maximum declared demand).
+
+#### Q40: How does Banker's Resource-Request algorithm decide whether a request can be granted?
+**Ans:**
+1. If $Request_i \le Need_i$, proceed; else throw error (process exceeded maximum claim).
+2. If $Request_i \le Available$, proceed; else process $P_i$ must wait (insufficient free resources).
+3. Pretend to allocate by adjusting vectors:
+   $$Available = Available - Request_i$$
+   $$Allocation_i = Allocation_i + Request_i$$
+   $$Need_i = Need_i - Request_i$$
+4. Run the Safety Algorithm on this tentative state. If safe, grant the resources; if unsafe, roll back the tentative state and force $P_i$ to wait.

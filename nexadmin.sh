@@ -404,6 +404,39 @@ menu_settings() {
 }
 
 # ==============================================================================
+# C Simulator Launchers (Academic Operating System Algorithms)
+# OS Concept: Multi-paradigm systems integration. Spawns high-performance native
+#             compiled C executables from Bash without eval.
+# ==============================================================================
+launch_c_simulator() {
+    local bin_name="$1"
+    local display_name="$2"
+    local bin_path="${BASE_DIR}/bin/${bin_name}"
+
+    # Verify executable exists; if not, attempt automated build via Makefile
+    if [[ ! -x "${bin_path}" ]]; then
+        printf "\n%s[NOTICE] Binary '%s' not found. Compiling via Makefile...%s\n" \
+            "${COLOR_YELLOW}" "${bin_path}" "${COLOR_RESET}"
+        if make -C "${BASE_DIR}" all; then
+            printf "%s[SUCCESS] Simulators compiled successfully.%s\n\n" "${COLOR_GREEN}" "${COLOR_RESET}"
+            sleep 0.8
+        else
+            printf "%s[ERROR] Build failure! Please verify GCC and Make are installed.%s\n" \
+                "${COLOR_RED}" "${COLOR_RESET}"
+            pause_screen
+            return 1
+        fi
+    fi
+
+    log_action "Launched C simulator: ${display_name} (${bin_path})"
+    clear
+    # Invoke compiled native C executable directly without eval
+    "${bin_path}"
+    log_action "Finished session in C simulator: ${display_name}"
+    pause_screen
+}
+
+# ==============================================================================
 # Main Menu Navigation Loop
 # ==============================================================================
 main_menu() {
@@ -423,16 +456,22 @@ main_menu() {
         printf "  %s9)%s System & Security Log Viewer\n" "${COLOR_CYAN}" "${COLOR_RESET}"
         printf " %s10)%s Alerts & Threshold Monitor\n" "${COLOR_CYAN}" "${COLOR_RESET}"
         printf " %s11)%s History & Health Reports\n" "${COLOR_CYAN}" "${COLOR_RESET}"
-        printf " %s12)%s Settings & Configuration\n" "${COLOR_CYAN}" "${COLOR_RESET}"
-        printf " %s13)%s Exit NexAdmin\n" "${COLOR_RED}" "${COLOR_RESET}"
+        printf " %s12)%s CPU Scheduling Simulator %s[C Engine: FCFS/SJF/RR]%s\n" "${COLOR_GREEN}" "${COLOR_RESET}" "${COLOR_DIM}" "${COLOR_RESET}"
+        printf " %s13)%s Page Replacement Simulator %s[C Engine: FIFO/LRU/OPT]%s\n" "${COLOR_GREEN}" "${COLOR_RESET}" "${COLOR_DIM}" "${COLOR_RESET}"
+        printf " %s14)%s Deadlock Detection Simulator %s[C Engine: Banker's]%s\n" "${COLOR_GREEN}" "${COLOR_RESET}" "${COLOR_DIM}" "${COLOR_RESET}"
+        printf " %s15)%s Settings & Configuration\n" "${COLOR_CYAN}" "${COLOR_RESET}"
+        printf " %s16)%s Exit NexAdmin\n" "${COLOR_RED}" "${COLOR_RESET}"
         printf "%s--------------------------------------------------------------------------------%s\n" "${COLOR_DIM}" "${COLOR_RESET}"
-        printf "Select an option [1-13]: "
+        printf "Select an option [1-16]: "
 
-        read -r choice
+        if ! read -r choice; then
+            printf "\n%s[NOTICE] End-of-file received on input stream. Exiting NexAdmin.%s\n" "${COLOR_YELLOW}" "${COLOR_RESET}"
+            exit 0
+        fi
 
         # Input validation: check non-numeric or out of range
         if ! is_number "${choice}"; then
-            printf "%s[ERROR] Non-numeric input. Please select a valid option (1-13).%s\n" "${COLOR_RED}" "${COLOR_RESET}"
+            printf "%s[ERROR] Non-numeric input. Please select a valid option (1-16).%s\n" "${COLOR_RED}" "${COLOR_RESET}"
             sleep 1.2
             continue
         fi
@@ -449,8 +488,11 @@ main_menu() {
             9)  menu_log_viewer ;;
             10) menu_alerts ;;
             11) menu_history_reports ;;
-            12) menu_settings ;;
-            13)
+            12) launch_c_simulator "scheduler" "CPU Scheduling Simulator" ;;
+            13) launch_c_simulator "paging" "Page Replacement Simulator" ;;
+            14) launch_c_simulator "deadlock" "Deadlock / Banker's Algorithm Simulator" ;;
+            15) menu_settings ;;
+            16)
                 if confirm "Are you sure you want to exit NexAdmin?" "y"; then
                     log_action "User logged out of NexAdmin"
                     printf "\n%sThank you for using NexAdmin. Goodbye!%s\n\n" "${COLOR_GREEN}" "${COLOR_RESET}"
@@ -458,7 +500,7 @@ main_menu() {
                 fi
                 ;;
             *)
-                printf "%s[ERROR] Choice out of range! Please choose between 1 and 13.%s\n" "${COLOR_RED}" "${COLOR_RESET}"
+                printf "%s[ERROR] Choice out of range! Please choose between 1 and 16.%s\n" "${COLOR_RED}" "${COLOR_RESET}"
                 sleep 1.2
                 ;;
         esac

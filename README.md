@@ -1,6 +1,6 @@
-# NexAdmin: Linux System Administration & Monitoring Toolkit
+# NexAdmin: Linux System Administration & Academic OS Simulation Toolkit
 
-NexAdmin is a production-grade, terminal-based Linux system administration, real-time telemetry monitoring, and disaster recovery toolkit engineered purely in POSIX-compliant Bash. Designed for university Operating Systems laboratory defense and enterprise server auditing, NexAdmin provides deep observability into Linux kernel internals (`/proc` and `/sys`) without requiring external dependencies, Python runtimes, or network connectivity.
+NexAdmin is a production-grade, dual-engine Linux system administration, real-time telemetry monitoring, disaster recovery, and academic OS simulation toolkit. Engineered using **Bash** for native Linux system administration and **C (C11)** for high-performance academic operating system algorithm simulations, NexAdmin provides deep observability into Linux kernel internals (`/proc` and `/sys`) and theoretical OS algorithms without requiring external packages or internet connectivity.
 
 ---
 
@@ -9,6 +9,7 @@ NexAdmin is a production-grade, terminal-based Linux system administration, real
 ```
 nexadmin/
 ├── nexadmin.sh        # Primary entry point: CLI flags, SHA-256 login, dashboard summary, main loop
+├── Makefile           # Build system for C engines: make, make test, make clean, make run
 ├── config.conf        # User-configurable alert thresholds and operational timers
 ├── lib/
 │   └── common.sh      # Shared library: ANSI colors, audit logger, validators, progress bars, root checks
@@ -22,104 +23,87 @@ nexadmin/
 │   ├── logs.sh        # Forensics & diagnostics: Failed login attacks, top source IPs, syslog/journald
 │   ├── network.sh     # Network diagnostics: IP routes, DNS, ss listening sockets, ping, /proc/net/dev I/O
 │   └── report.sh      # Historical telemetry: CSV time-series, ASCII charts, System Health Reports
+├── src/               # Native C academic algorithm simulators
+│   ├── scheduler.c    # CPU Scheduling: FCFS, Non-preemptive SJF, Round Robin, ASCII Gantt charts
+│   ├── paging.c       # Page Replacement: FIFO, LRU, Optimal, frame-by-frame trace, hit/fault ratios
+│   └── deadlock.c     # Deadlock Avoidance: Banker's Safety Algorithm, Need matrix, Resource-Request
+├── bin/               # Compiled native binaries: scheduler, paging, deadlock
 ├── data/              # Runtime state: history.csv, alerts.log, password hash, PID files
-├── backups/           # Compressed archives (.tar.gz) and cryptographic checksums (.md5)
-├── reports/           # Timestamped System Health Audit reports (.txt) and CSV exports
+├── backups/           # Storage repository for compressed archives (.tar.gz) and checksums (.md5)
+├── reports/           # Timestamped health audit reports (.txt) and CSV exports
 ├── nexadmin.log       # Centralized audit log tracking all user and daemon activities
 ├── README.md          # Technical documentation and architecture specification
 ├── TESTING.md         # Comprehensive test protocols, test cases, and verification results
 ├── EXPLAIN_BN.md      # Full Bengali explanation of all modules and functions for Viva defense
-└── VIVA_QA.md         # 30 high-yield Operating Systems viva defense questions and answers
+└── VIVA_QA.md         # 40 high-yield Operating Systems viva defense questions and answers
 ```
 
 ---
 
 ## 🚀 Key Features
 
-### 1. Live Telemetry & Hardware Observability (`monitor.sh`)
-- **Kernel Jiffies CPU Calculation**: Derives true CPU utilization by computing the differential of non-idle vs total CPU time over a sampling window directly from `/proc/stat`.
-- **Accurate Memory Accounting**: Computes active RAM usage using `MemAvailable` from `/proc/meminfo` (accounting for reclaimable kernel buffers and cached pages).
-- **Filesystem & Hardware Sensors**: Inspects physical disk volume usage (`df`), ACPI battery state (`/sys/class/power_supply/BAT*`), and thermal zones (`/sys/class/thermal/thermal_zone*`).
-- **Interactive Live Monitor**: Auto-refreshing terminal dashboard with dynamic ANSI-colored text progress bars (`[#####-----] 50%`) and clean 'q' quit binding.
+### A. Academic OS Algorithm Simulators (Native C Engine)
+1. **CPU Scheduling Simulator (`src/scheduler.c` -> `bin/scheduler`)**:
+   - Algorithms: First-Come, First-Served (**FCFS**), Non-preemptive Shortest Job First (**SJF**), and **Round Robin (RR)**.
+   - Computes Completion Time ($CT$), Turnaround Time ($TAT = CT - AT$), and Waiting Time ($WT = TAT - BT$).
+   - Calculates Average Turnaround Time and Average Waiting Time.
+   - Generates horizontal text-based ASCII **Gantt Charts** illustrating timeline slices and CPU idle intervals.
+2. **Virtual Memory Page Replacement Simulator (`src/paging.c` -> `bin/paging`)**:
+   - Policies: **FIFO**, **LRU** (Least Recently Used), and **Optimal** (Belady's MIN).
+   - Generates full frame-by-frame memory trace tables showing frame contents and `HIT` / `FAULT` indicators.
+   - Tracks Page Hits, Page Faults, Hit Ratio %, and Fault Ratio %.
+   - Compares all three algorithms side-by-side on custom or classic 20-page benchmark reference strings.
+3. **Deadlock Avoidance & Banker's Algorithm (`src/deadlock.c` -> `bin/deadlock`)**:
+   - Implements **Dijkstra's Banker's Algorithm** for deadlock avoidance.
+   - Automatically derives the **Need Matrix** ($Need = Max - Allocation$) and validates system state matrices.
+   - Determines **Safe vs Unsafe states** and derives safe execution sequences (e.g. `< P1 -> P3 -> P4 -> P0 -> P2 >`).
+   - Simulates dynamic **Resource-Request algorithm** to safely evaluate tentative allocations.
 
-### 2. Process Telemetry & Inspection (`process.sh`)
-- **Process State Mapping**: Maps Linux task states (`R`, `S`, `D`, `T`, `Z`, `I`) to human-readable explanations.
-- **Top Resource Consumers**: Instantaneous sorting of top 10 CPU and Memory consumers.
-- **Process Hierarchy Inspector**: Given any PID, extracts owner, resident RAM (`VmRSS`), virtual size (`VmSize`), start time, active thread count, executable command line, parent process name, and child process tree.
-
-### 3. Process Control & Lifecycle Management (`procmgr.sh`)
-- **Signal Dispatching**: Supports graceful termination (`SIGTERM` 15), uncatchable force kill (`SIGKILL` 9), execution suspension (`SIGSTOP` 19), and execution resumption (`SIGCONT` 18).
-- **Dynamic Priority Scheduling**: Adjusts process CPU niceness (`renice` from -20 to 19).
-- **Kernel Safety Protections**: Strictly blocks attempts to terminate `PID 1` (init/systemd), the running NexAdmin process (`$$`), or its parent shell (`$PPID`).
-- **Zombie & Uninterruptible Sleep Diagnostics**: Identifies defunct zombie processes with their parent PIDs, explaining wait/reaping mechanics; identifies D-state processes blocked on kernel I/O.
-
-### 4. Autonomous Threshold Alerting (`alert.sh`)
-- Real-time comparison of CPU, RAM, Disk, Load Average, and Battery against `config.conf` thresholds.
-- Appends structured warning entries to `data/alerts.log`.
-- Autonomous background monitoring daemon with PID lifecycle management (`start_alert_daemon` / `stop_alert_daemon`).
-
-### 5. Enterprise Backup & Disaster Recovery (`backup.sh`)
-- **Full Backups**: Compressed `.tar.gz` archives with relative target isolation (preventing path traversal).
-- **Incremental Backups**: Tracks file changes via modification timestamps (`mtime`) against baseline marker files (`find -newer`).
-- **Cryptographic Verification**: Computes and audits MD5 checksums; rejects corrupted or tampered archives before restoration.
-- **Lifecycle Retention**: Prunes archives older than $N$ days (`BACKUP_RETENTION_DAYS`).
-- **Crontab Scheduling**: Generates and installs automated daily cron jobs.
-
-### 6. Identity & User Administration (`users.sh`)
-- Audits `/etc/passwd` (UID >= 1000) and `/etc/group`.
-- Shows active sessions (`who`), historical logins (`last`), and password aging policies (`chage -l`).
-- Safe user provisioning (`useradd`, `userdel -r`, `usermod -L/-U/-aG`) with regex username validation and root protections.
-- Graceful privilege degradation: non-root users can access all read-only inspection menus while administrative mutations display informative permission notices.
-
-### 7. Security Forensics & System Logs (`logs.sh`)
-- Parses `/var/log/auth.log` or `/var/log/secure` for brute force authentication failures.
-- Extracts and aggregates top attacking source IP addresses (`grep`, `awk`, `sort`, `uniq -c`).
-- Filters system events by priority or custom keywords via `journalctl` or `/var/log/syslog`.
-
-### 8. Network Diagnostics & Bandwidth Meter (`network.sh`)
-- Inspects network interfaces, IP addresses, default gateway routes, and `/etc/resolv.conf` DNS nameservers.
-- Displays TCP/UDP listening sockets via `ss -tuln`.
-- Automated ICMP ping reachability diagnostics with latency analysis.
-- Live network interface transfer rates (KB/s download and upload) sampled from `/proc/net/dev`.
-
-### 9. Historical Telemetry & Health Reporting (`report.sh`)
-- Periodically records time-series metrics (`Timestamp,CPU,RAM,Disk,Processes`) to `data/history.csv`.
-- Renders terminal-based ASCII bar charts representing CPU trends over the last 20 snapshots.
-- Compiles timestamped comprehensive System Health Audit reports into `reports/health_<timestamp>.txt`.
+### B. Real Linux System Administration Modules (Pure Bash Engine)
+1. **Live Telemetry & Hardware Observability (`monitor.sh`)**:
+   - CPU % via `/proc/stat` jiffies delta, RAM % via `/proc/meminfo` (`MemAvailable`), disk partitions (`df`), battery, and thermal sensors.
+2. **Process Telemetry & Control (`process.sh` & `procmgr.sh`)**:
+   - Top 10 CPU/RAM consumers, PID details inspection, parent/child trees.
+   - Signal dispatching: `SIGTERM` (15), `SIGKILL` (9), `SIGSTOP` (19), `SIGCONT` (18), and `renice`.
+   - Kernel safety guardrails: strictly protects `PID 1` (init/systemd), the running script (`$$`), and parent shell.
+   - Zombie process auditor and uninterruptible sleep (D-state) diagnostics.
+3. **Autonomous Threshold Alerting (`alert.sh`)**:
+   - Evaluates thresholds from `config.conf` and manages a background alert daemon.
+4. **Disaster Recovery & Backup Manager (`backup.sh`)**:
+   - Full and incremental tar/gzip backups with modification time (`mtime`) markers.
+   - Cryptographic MD5 checksum verification; rejects corrupted or tampered archives.
+   - Lifecycle retention pruning and Crontab daily backup scheduling.
+5. **Identity & User Administration (`users.sh`)**:
+   - Audits `/etc/passwd`, `/etc/group`, `who`, `last`, and `chage -l` password aging.
+   - Safe user provisioning with regex validation and root protection.
+6. **Security Forensics & Logs (`logs.sh`)**:
+   - Detects brute-force SSH/local login attacks and extracts top attacking source IPs from `/var/log/auth.log`.
+7. **Network Diagnostics (`network.sh`)**:
+   - Interface IPs, default routes, DNS servers, `ss -tuln` listening sockets, ping latency, and `/proc/net/dev` transfer speed.
+8. **Historical Telemetry & Health Reports (`report.sh`)**:
+   - Time-series CSV logging, ASCII bar charts, and compiles comprehensive system health reports.
 
 ---
 
-## 🔒 Security Model
-
-1. **SHA-256 Master Password**: On first launch, the administrator creates a master password. Only its SHA-256 hash is stored in `data/.password.hash` with `chmod 600`.
-2. **Brute Force Lockout**: Maximum 3 consecutive authentication attempts before termination.
-3. **Strict Policy Enforcement**: Bypassing authentication (`--no-login`) is explicitly prohibited.
-4. **Input Sanitization**: All user inputs (PIDs, usernames, filenames, numbers) are strictly validated via POSIX regex. No `eval` statements are utilized.
-5. **Privilege Separation**: Unprivileged execution is fully supported; read-only telemetry operates seamlessly, while administrative operations warn and instruct the operator to run with `sudo`.
-
----
-
-## 🛠️ Installation & Getting Started
+## 🛠️ Build & Installation
 
 ### Prerequisites
-NexAdmin runs on standard Ubuntu, Debian, or generic Linux distributions with standard core utilities (`bash`, `awk`, `grep`, `sed`, `ps`, `tar`, `gzip`, `ip`, `ss`, `ping`). No internet access or extra package installation is required.
+- Standard Linux (Ubuntu / Debian / Generic).
+- Standard build tools: `gcc` and `make`.
+- No third-party packages or internet connection required.
 
-### Quick Start
+### Building & Running
 ```bash
-# Navigate to the project directory
-cd nexadmin
+# 1. Build all C simulators
+make
 
-# Grant execution permission
-chmod +x nexadmin.sh
+# 2. Run automated self-verification unit tests
+make test
 
-# Launch the toolkit
+# 3. Launch NexAdmin
 ./nexadmin.sh
-```
-
-### Command-Line Arguments
-```bash
-./nexadmin.sh --help       # Display usage documentation and options
-./nexadmin.sh --version    # Display version and academic attribution
+# or simply:
+make run
 ```
 
 ---

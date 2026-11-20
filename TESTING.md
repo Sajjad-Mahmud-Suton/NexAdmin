@@ -161,37 +161,71 @@ TEST_PID=$!
 
 ---
 
+### Phase 6: Academic OS Simulators (C Engine Unit Tests)
+
+#### Test 6.1: CPU Scheduling Simulator Verification (`bin/scheduler --test`)
+- **Algorithms Tested**: FCFS, Non-Preemptive SJF, Round Robin (Quantum = 2).
+- **Workload**:
+  - $P_1$: $AT=0, BT=5$
+  - $P_2$: $AT=1, BT=3$
+  - $P_3$: $AT=2, BT=8$
+  - $P_4$: $AT=3, BT=6$
+- **Expected Theoretical Metrics**:
+  - **FCFS**: $CT = [5, 8, 16, 22]$, $\text{Avg } TAT = 11.25$, $\text{Avg } WT = 5.75$.
+  - **SJF**: Execution Order $P_1 \to P_2 \to P_4 \to P_3$, $CT = [5, 8, 22, 14]$, $\text{Avg } TAT = 10.75$, $\text{Avg } WT = 5.25$.
+  - **Round Robin ($Q=2$)**: Preemption cycling correctly tracks remaining bursts; $P_2$ completes at $t=11$.
+- **Verification Output**:
+  ```
+  [PASS] FCFS Unit Test: CT, TAT, and WT matched expected values.
+  [PASS] SJF Unit Test: Scheduling order and completion times verified.
+  [PASS] Round Robin Unit Test: Preemption and quantum cycling verified.
+  ```
+- **Verification Status**: ✅ PASSED.
+
+#### Test 6.2: Virtual Memory Page Replacement Verification (`bin/paging --test`)
+- **Algorithms Tested**: FIFO, LRU, Belady's Optimal.
+- **Workload**: Silberschatz 20-Page Benchmark Reference String:
+  `7 0 1 2 0 3 0 4 2 3 0 3 2 1 2 0 1 7 0 1` (3 Physical Frames).
+- **Expected Theoretical Faults**:
+  - **FIFO**: Exactly 15 Page Faults, 5 Page Hits ($\text{Hit Ratio} = 25.0\%$).
+  - **LRU**: Exactly 12 Page Faults, 8 Page Hits ($\text{Hit Ratio} = 40.0\%$).
+  - **Optimal**: Exactly 9 Page Faults, 11 Page Hits ($\text{Hit Ratio} = 55.0\%$).
+- **Verification Output**:
+  ```
+  [PASS] FIFO Benchmark: Exactly 15 Faults and 5 Hits verified.
+  [PASS] LRU Benchmark: Exactly 12 Faults and 8 Hits verified.
+  [PASS] Optimal Benchmark: Exactly 9 Faults and 11 Hits verified.
+  ```
+- **Verification Status**: ✅ PASSED.
+
+#### Test 6.3: Banker's Deadlock Safety & Unsafe Detection (`bin/deadlock --test`)
+- **Algorithms Tested**: Dijkstra's Banker's Algorithm (Safety & Resource-Request).
+- **Workload**: 5 Processes ($P_0 \dots P_4$), 3 Resource Types ($A, B, C$).
+  - $Available = [3, 3, 2]$
+  - $Allocation = [0,1,0], [2,0,0], [3,0,2], [2,1,1], [0,0,2]$
+  - $Max = [7,5,3], [3,2,2], [9,0,2], [2,2,2], [4,3,3]$
+- **Expected Results**:
+  1. Safe state confirmed; safe sequence begins with $P_1$.
+  2. Mutated state with $0$ available resources correctly flagged as UNSAFE.
+- **Verification Output**:
+  ```
+  [PASS] Banker's Safety Test: Verified safe sequence starting with P1.
+  [PASS] Banker's Unsafe Detection Test: Successfully identified deadlock state.
+  ```
+- **Verification Status**: ✅ PASSED.
+
+#### Test 6.4: Native C Simulator Invocation from Bash Menu
+- **Action**: Launch Option 12, 13, and 14 from `nexadmin.sh` using direct binary paths without `eval`.
+- **Result**: Bash transparently transfers control to compiled binaries, captures outputs, and returns gracefully to the dashboard upon exit.
+- **Verification Status**: ✅ PASSED.
+
+---
+
 ## 📋 Comprehensive Automated Test Runner
 
-Evaluators can verify all modules in a single automated pass by executing:
+Evaluators can verify all modules and C simulators in a single automated pass by executing:
 
 ```bash
 cd nexadmin
-bash -c '
-set -e
-echo "1. Checking Syntax of all Bash scripts..."
-bash -n nexadmin.sh lib/*.sh modules/*.sh
-echo "   All scripts passed syntax validation."
-
-echo "2. Testing Command-line Arguments..."
-./nexadmin.sh --help >/dev/null
-./nexadmin.sh --version >/dev/null
-(! ./nexadmin.sh --no-login >/dev/null 2>&1)
-echo "   Argument validation and security enforcement verified."
-
-echo "3. Testing Telemetry & Hardware Sensors..."
-source lib/common.sh && source modules/monitor.sh
-echo "   CPU: $(get_quick_cpu)% | RAM: $(get_quick_ram)% | Disk: $(get_quick_disk)%"
-
-echo "4. Testing Disposable Process Signals..."
-source modules/procmgr.sh
-sleep 1000 &
-PID=$!
-send_signal_to_process "$PID" "SIGSTOP" 19 >/dev/null
-send_signal_to_process "$PID" "SIGCONT" 18 >/dev/null
-send_signal_to_process "$PID" "SIGTERM" 15 >/dev/null
-echo "   Signal dispatching and process lifecycle verified."
-
-echo "=== ALL INTEGRATION TESTS SUCCESSFULLY PASSED ==="
-'
+make test
 ```
